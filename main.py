@@ -30,6 +30,12 @@ async def main():
     message_parser = subparsers.add_parser('message', help='Получение статистики конкретного сообщения')
     message_parser.add_argument('url', type=str, help='URL сообщения в формате https://t.me/channel/123')
     message_parser.add_argument('-o', '--output', type=str, help='Путь к файлу для сохранения JSON (по умолчанию: вывод в консоль)')
+
+    # Парсер для экспорта сообщений в CSV
+    export_parser = subparsers.add_parser('export', help='Экспортировать сообщения канала в CSV')
+    export_parser.add_argument('channel', type=str, help='URL или username канала (@channel или https://t.me/channel)')
+    export_parser.add_argument('-o', '--output', type=str, required=True, help='Путь к CSV файлу')
+    export_parser.add_argument('--DEBUG', action='store_true', help='Остановить после первых 100 сообщений')
     
     args = parser.parse_args()
     
@@ -44,23 +50,37 @@ async def main():
         if args.command == 'messages':
             messages = await client.get_messages(args.channel, args.limit)
             json_data = client.messages_to_json(messages)
+            if args.output:
+                with open(args.output, 'w', encoding='utf-8') as f:
+                    f.write(json_data)
+                print(f'Результат сохранен в файл: {args.output}')
+            else:
+                print(json_data)
         elif args.command == 'stats':
             stats = await client.get_channel_stats(args.channel, args.limit, args.max_date, args.only_text)
             json_data = client.messages_to_json(stats)
+            if args.output:
+                with open(args.output, 'w', encoding='utf-8') as f:
+                    f.write(json_data)
+                print(f'Результат сохранен в файл: {args.output}')
+            else:
+                print(json_data)
         elif args.command == 'message':
             stats = await client.get_message_stats(args.url)
             json_data = client.messages_to_json(stats)
+            if args.output:
+                with open(args.output, 'w', encoding='utf-8') as f:
+                    f.write(json_data)
+                print(f'Результат сохранен в файл: {args.output}')
+            else:
+                print(json_data)
+        elif args.command == 'export':
+            limit = 100 if args.DEBUG else None
+            await client.export_channel_csv(args.channel, args.output, limit=limit)
+            print(f'Экспорт завершен. Файл: {args.output}')
         else:
             parser.print_help()
             return 1
-        
-        # Вывод результата
-        if args.output:
-            with open(args.output, 'w', encoding='utf-8') as f:
-                f.write(json_data)
-            print(f'Результат сохранен в файл: {args.output}')
-        else:
-            print(json_data)
             
     except Exception as e:
         print(f'Ошибка: {e}', file=sys.stderr)
