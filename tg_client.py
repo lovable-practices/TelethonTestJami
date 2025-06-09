@@ -3,6 +3,8 @@
 
 import os
 import json
+import csv
+import asyncio
 from datetime import datetime, timezone
 from telethon import TelegramClient
 from dotenv import load_dotenv
@@ -188,4 +190,37 @@ class TelegramChannelClient:
             'forwards': getattr(message, 'forwards', 0),
             'has_media': message.media is not None,
             'reactions': getattr(message, 'reactions', None)
-        } 
+        }
+
+    async def export_channel_csv(self, channel_url: str, output_path: str, limit: Optional[int] = None) -> None:
+        """Экспорт сообщений канала в CSV-файл.
+
+        Args:
+            channel_url: URL или username канала.
+            output_path: Путь для сохранения CSV-файла.
+            limit: Ограничение количества экспортируемых сообщений. ``None`` экспортирует всю историю.
+        """
+        # Нормализуем URL канала
+        if channel_url.startswith('https://t.me/'):
+            channel_username = channel_url.split('/')[-1]
+        elif channel_url.startswith('@'):
+            channel_username = channel_url[1:]
+        else:
+            channel_username = channel_url
+
+        with open(output_path, 'w', newline='', encoding='utf-8') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(['id', 'date', 'text', 'views', 'forwards'])
+
+            count = 0
+            async for message in self.client.iter_messages(channel_username, limit=limit):
+                writer.writerow([
+                    message.id,
+                    message.date.isoformat(),
+                    (message.text or '').replace('\n', ' ').replace('\r', ''),
+                    getattr(message, 'views', None),
+                    getattr(message, 'forwards', None)
+                ])
+                count += 1
+                if count % 100 == 0:
+                    await asyncio.sleep(1)
