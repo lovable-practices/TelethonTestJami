@@ -31,6 +31,14 @@ class TelegramChannelClient:
     async def stop(self):
         """Остановка клиента"""
         await self.client.disconnect()
+
+    async def find_chat_by_title(self, title: str):
+        """Поиск чата по его названию среди диалогов пользователя."""
+        dialogs = await self.client.get_dialogs()
+        for dialog in dialogs:
+            if dialog.name == title:
+                return dialog.entity
+        return None
         
     async def get_messages(self, channel_url: str, limit: int = 10) -> List[Dict[str, Any]]:
         """
@@ -44,16 +52,20 @@ class TelegramChannelClient:
             List[Dict]: Список сообщений в формате словаря
         """
         # Нормализуем URL канала
+        entity: Union[str, Any]
         if channel_url.startswith('https://t.me/'):
-            channel_username = channel_url.split('/')[-1]
+            entity = channel_url.split('/')[-1]
         elif channel_url.startswith('@'):
-            channel_username = channel_url[1:]
+            entity = channel_url[1:]
         else:
-            channel_username = channel_url
+            chat = await self.find_chat_by_title(channel_url)
+            if not chat:
+                raise ValueError(f'Чат "{channel_url}" не найден')
+            entity = chat
             
         # Получаем сообщения
         messages = []
-        async for message in self.client.iter_messages(channel_username, limit=limit):
+        async for message in self.client.iter_messages(entity, limit=limit):
             # Преобразуем сообщение в словарь
             message_dict = {
                 'id': message.id,
@@ -95,12 +107,16 @@ class TelegramChannelClient:
             Dict: Статистика канала
         """
         # Нормализуем URL канала
+        entity: Union[str, Any]
         if channel_url.startswith('https://t.me/'):
-            channel_username = channel_url.split('/')[-1]
+            entity = channel_url.split('/')[-1]
         elif channel_url.startswith('@'):
-            channel_username = channel_url[1:]
+            entity = channel_url[1:]
         else:
-            channel_username = channel_url
+            chat = await self.find_chat_by_title(channel_url)
+            if not chat:
+                raise ValueError(f'Чат "{channel_url}" не найден')
+            entity = chat
 
         # Преобразуем дату в datetime объект с часовым поясом UTC
         max_date_obj = None
@@ -118,7 +134,7 @@ class TelegramChannelClient:
         messages = []
 
         # Получаем сообщения старше указанной даты
-        async for message in self.client.iter_messages(channel_username, limit=None):
+        async for message in self.client.iter_messages(entity, limit=None):
             # Пропускаем сообщения новее указанной даты
             if max_date_obj and message.date > max_date_obj:
                 continue
@@ -201,19 +217,23 @@ class TelegramChannelClient:
             limit: Ограничение количества экспортируемых сообщений. ``None`` экспортирует всю историю.
         """
         # Нормализуем URL канала
+        entity: Union[str, Any]
         if channel_url.startswith('https://t.me/'):
-            channel_username = channel_url.split('/')[-1]
+            entity = channel_url.split('/')[-1]
         elif channel_url.startswith('@'):
-            channel_username = channel_url[1:]
+            entity = channel_url[1:]
         else:
-            channel_username = channel_url
+            chat = await self.find_chat_by_title(channel_url)
+            if not chat:
+                raise ValueError(f'Чат "{channel_url}" не найден')
+            entity = chat
 
         with open(output_path, 'w', newline='', encoding='utf-8') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(['id', 'date', 'text', 'views', 'forwards'])
 
             count = 0
-            async for message in self.client.iter_messages(channel_username, limit=limit):
+            async for message in self.client.iter_messages(entity, limit=limit):
                 writer.writerow([
                     message.id,
                     message.date.isoformat(),

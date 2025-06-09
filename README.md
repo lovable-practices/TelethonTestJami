@@ -61,6 +61,12 @@ python main.py messages @channel_name
 python main.py messages https://t.me/channel_name
 ```
 
+Для приватных чатов используйте название чата:
+
+```bash
+python main.py messages "Название чата"
+```
+
 Дополнительные параметры:
 - Указание количества сообщений:
 ```bash
@@ -71,6 +77,12 @@ python main.py messages @channel_name -l 20
 
 ```bash
 python main.py stats @channel_name
+```
+
+Для приватных чатов можно указать название чата:
+
+```bash
+python main.py stats "Название чата"
 ```
 
 Дополнительные параметры:
@@ -91,6 +103,12 @@ python main.py stats @channel_name -t
 
 ```bash
 python main.py export @channel_name -o messages.csv
+```
+
+Для приватных чатов укажите название чата:
+
+```bash
+python main.py export "Название чата" -o messages.csv
 ```
 
 В режиме отладки можно экспортировать только первые 100 сообщений:
