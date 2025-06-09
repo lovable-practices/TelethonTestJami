@@ -126,4 +126,4 @@ python main.py --help
 
 ## Лицензия
 
-MIT 
+MIT License. See [LICENSE](LICENSE) for details.
